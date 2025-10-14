@@ -303,6 +303,10 @@ fun HomeScreen(navController: NavController) {
                     } else {
                         coroutineScope.launch(Dispatchers.IO) {
                             val audio = SherpaOnnxEngine.tts.generate(ttsText)
+                            val shortSamples = ShortArray(audio.samples.size) { index ->
+                                val clamped = audio.samples[index].coerceIn(-1.0f, 1.0f)
+                                (clamped * Short.MAX_VALUE).toInt().toShort()
+                            }
                             val audioTrack = AudioTrack.Builder()
                                 .setAudioFormat(
                                     AudioFormat.Builder()
@@ -311,11 +315,11 @@ fun HomeScreen(navController: NavController) {
                                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                                         .build()
                                 )
-                                .setBufferSizeInBytes(audio.samples.size * 2)
+                                .setBufferSizeInBytes(shortSamples.size * 2)
                                 .build()
                             try {
                                 audioTrack.play()
-                                audioTrack.write(audio.samples, 0, audio.samples.size)
+                                audioTrack.write(shortSamples, 0, shortSamples.size)
                             } finally {
                                 audioTrack.stop()
                                 audioTrack.release()
