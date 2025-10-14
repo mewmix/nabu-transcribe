@@ -72,20 +72,30 @@ object SherpaOnnxEngine {
 
             val punctConfig = OfflinePunctuationConfig(
                 model = OfflinePunctuationModelConfig(
-                    model = "punct/model.onnx",
-                    vocab = "punct/bpe.vocab"
+                    ctTransformer = "punct/model.onnx",
+                    numThreads = 1,
+                    debug = false,
+                    provider = "cpu"
                 )
             )
             _punct = OfflinePunctuation(assetManager, punctConfig)
 
             val ttsConfig = OfflineTtsConfig(
                 model = OfflineTtsModelConfig(
-                    model = "tts/model.onnx",
-                    lexicon = "",
-                    tokens = "tts/config.json",
-                    dataDir = "",
-                    dictDir = ""
-                )
+                    vits = OfflineTtsVitsModelConfig(
+                        model = "tts/model.onnx",
+                        lexicon = "",
+                        tokens = "tts/config.json",
+                        dataDir = "",
+                        dictDir = ""
+                    ),
+                    numThreads = 1,
+                    debug = false,
+                    provider = "cpu"
+                ),
+                ruleFsts = "",
+                ruleFars = "",
+                maxNumSentences = 1
             )
             _tts = OfflineTts(assetManager, ttsConfig)
 
