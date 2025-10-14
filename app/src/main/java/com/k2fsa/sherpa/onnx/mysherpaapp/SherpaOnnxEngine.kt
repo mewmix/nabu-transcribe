@@ -25,14 +25,14 @@ object SherpaOnnxEngine {
             return _vad!!
         }
 
-    var _punct: OnlinePunctuation? = null
-    val punct: OnlinePunctuation
+    var _punct: OfflinePunctuation? = null
+    val punct: OfflinePunctuation
         get() = withDebugLogging {
             return _punct!!
         }
 
-    var _tts: Tts? = null
-    val tts: Tts
+    var _tts: OfflineTts? = null
+    val tts: OfflineTts
         get() = withDebugLogging {
             return _tts!!
         }
@@ -70,11 +70,24 @@ object SherpaOnnxEngine {
             )
             _vad = Vad(assetManager, vadConfig)
 
-            val punctConfig = OnlinePunctuationConfig(model = "punct/model.onnx", vocab = "punct/bpe.vocab")
-            _punct = OnlinePunctuation(assetManager, punctConfig)
+            val punctConfig = OfflinePunctuationConfig(
+                model = OfflinePunctuationModelConfig(
+                    model = "punct/model.onnx",
+                    vocab = "punct/bpe.vocab"
+                )
+            )
+            _punct = OfflinePunctuation(assetManager, punctConfig)
 
-            val ttsConfig = TtsConfig(model = "tts/model.onnx", vocab = "tts/config.json")
-            _tts = Tts(assetManager, ttsConfig)
+            val ttsConfig = OfflineTtsConfig(
+                model = OfflineTtsModelConfig(
+                    model = "tts/model.onnx",
+                    lexicon = "",
+                    tokens = "tts/config.json",
+                    dataDir = "",
+                    dictDir = ""
+                )
+            )
+            _tts = OfflineTts(assetManager, ttsConfig)
 
             val sdConfig = OfflineSpeakerDiarizationConfig(
                 segmentation = OfflineSpeakerSegmentationModelConfig(

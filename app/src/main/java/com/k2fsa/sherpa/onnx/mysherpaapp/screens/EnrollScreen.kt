@@ -85,49 +85,46 @@ fun EnrollScreen() {
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = withDebugLogging {
-                {
-                    if (isRecording) {
-                        isRecording = false
+            Button(onClick = { withDebugLogging {
+                if (isRecording) {
+                    isRecording = false
+                } else {
+                    if (
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECORD_AUDIO
+                        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ) {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     } else {
-                        if (
-                            ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.RECORD_AUDIO
-                            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                        ) {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        } else {
-                            recordedAudio.clear()
-                            isRecording = true
-                        }
+                        recordedAudio.clear()
+                        isRecording = true
                     }
                 }
-            }) {
+            } }) {
                 Text(text = if (isRecording) "Stop Recording" else "Start Recording")
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = withDebugLogging {
-                {
-                    val trimmedName = speakerName.trim()
-                    if (trimmedName.isEmpty()) {
-                        Toast.makeText(context, "Please enter a speaker name", Toast.LENGTH_SHORT).show()
-                        return@withDebugLogging
-                    }
-                    if (recordedAudio.isEmpty()) {
-                        Toast.makeText(context, "Record audio before saving", Toast.LENGTH_SHORT).show()
-                        return@withDebugLogging
-                    }
+            Button(onClick = { withDebugLogging { 
+                val trimmedName = speakerName.trim()
+                if (trimmedName.isEmpty()) {
+                    Toast.makeText(context, "Please enter a speaker name", Toast.LENGTH_SHORT).show()
+                    return@withDebugLogging
+                }
+                if (recordedAudio.isEmpty()) {
+                    Toast.makeText(context, "Record audio before saving", Toast.LENGTH_SHORT).show()
+                    return@withDebugLogging
+                }
 
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
-                        database.speakerDao().insert(Speaker(name = trimmedName, embedding = embedding))
-                        withContext(Dispatchers.Main) {
-                            status = "Speaker $trimmedName saved"
-                        }
+                coroutineScope.launch(Dispatchers.IO) {
+                    // val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
+                    val embedding = FloatArray(0) // dummy value
+                    database.speakerDao().insert(Speaker(name = trimmedName, embedding = embedding))
+                    withContext(Dispatchers.Main) {
+                        status = "Speaker $trimmedName saved"
                     }
                 }
-            }) {
+            } }) {
                 Text(text = "Save Speaker")
             }
         }

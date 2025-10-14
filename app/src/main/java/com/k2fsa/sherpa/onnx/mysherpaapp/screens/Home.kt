@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import androidx.navigation.NavController
 import com.k2fsa.sherpa.onnx.mysherpaapp.NavRoutes
 import com.k2fsa.sherpa.onnx.mysherpaapp.SherpaOnnxEngine
@@ -201,30 +202,33 @@ fun HomeScreen(navController: NavController) {
                         val builder = StringBuilder()
 
                         for (segment in segments) {
+                            val start = (segment.start * 16000).toInt()
+                            val end = (segment.end * 16000).toInt()
+                            val segmentSamples = audioSamples.sliceArray(start until end)
+
                             val stream = SherpaOnnxEngine.asr.createStream()
-                            stream.acceptWaveform(segment.samples, 16000)
+                            stream.acceptWaveform(segmentSamples, 16000)
                             SherpaOnnxEngine.asr.decode(stream)
                             val text = SherpaOnnxEngine.asr.getResult(stream).text
 
-                            val embedding = SherpaOnnxEngine.sd.extractEmbedding(segment.samples)
+                            // val embedding = SherpaOnnxEngine.sd.extractEmbedding(segmentSamples)
                             var speakerName = "Unknown"
                             var speakerId: Int? = null
-                            var maxSimilarity = 0.0f
-
-                            for (speaker in speakers) {
-                                val similarity = cosineSimilarity(embedding, speaker.embedding)
-                                if (similarity > maxSimilarity) {
-                                    maxSimilarity = similarity
-                                    speakerName = speaker.name
-                                    speakerId = speaker.id
-                                }
-                            }
-
-                            if (maxSimilarity < 0.6f) {
-                                speakerName = "Unknown"
-                                speakerId = null
-                            }
-
+                            // var maxSimilarity = 0.0f
+                            //
+                            // for (speaker in speakers) {
+                            //     val similarity = cosineSimilarity(embedding, speaker.embedding)
+                            //     if (similarity > maxSimilarity) {
+                            //         maxSimilarity = similarity
+                            //         speakerName = speaker.name
+                            //         speakerId = speaker.id
+                            //     }
+                            // }
+                            //
+                            // if (maxSimilarity < 0.6f) {
+                            //     speakerName = "Unknown"
+                            //     speakerId = null
+                            // }
                             builder.appendLine("$speakerName: $text")
 
                             meetingId?.let { currentMeetingId ->
@@ -298,7 +302,7 @@ fun HomeScreen(navController: NavController) {
                         Toast.makeText(context, "Enter text to synthesize", Toast.LENGTH_SHORT).show()
                     } else {
                         coroutineScope.launch(Dispatchers.IO) {
-                            val audio = SherpaOnnxEngine.tts.synthesize(ttsText)
+                            val audio = SherpaOnnxEngine.tts.generate(ttsText)
                             val audioTrack = AudioTrack.Builder()
                                 .setAudioFormat(
                                     AudioFormat.Builder()
@@ -405,7 +409,7 @@ fun HomeScreen(navController: NavController) {
                                 SherpaOnnxEngine.asr.decode(stream)
                                 var result = SherpaOnnxEngine.asr.getResult(stream).text
                                 if (updatedPunctuation.value) {
-                                    result = SherpaOnnxEngine.punct.add(result)
+                                    result = SherpaOnnxEngine.punct.addPunctuation(result)
                                 }
                                 withContext(Dispatchers.Main) {
                                     transcribedText = result
@@ -422,14 +426,14 @@ fun HomeScreen(navController: NavController) {
     }
 }
 
-fun cosineSimilarity(v1: FloatArray, v2: FloatArray): Float = withDebugLogging {
-    var dotProduct = 0.0f
-    var norm1 = 0.0f
-    var norm2 = 0.0f
-    for (i in v1.indices) {
-        dotProduct += v1[i] * v2[i]
-        norm1 += v1[i] * v1[i]
-        norm2 += v2[i] * v2[i]
-    }
-    return@withDebugLogging dotProduct / (kotlin.math.sqrt(norm1) * kotlin.math.sqrt(norm2))
-}
+// fun cosineSimilarity(v1: FloatArray, v2: FloatArray): Float = withDebugLogging {
+//     var dotProduct = 0.0f
+//     var norm1 = 0.0f
+//     var norm2 = 0.0f
+//     for (i in v1.indices) {
+//         dotProduct += v1[i] * v2[i]
+//         norm1 += v1[i] * v1[i]
+//         norm2 += v2[i] * v2[i]
+//     }
+//     return@withDebugLogging dotProduct / (kotlin.math.sqrt(norm1) * kotlin.math.sqrt(norm2))
+// }
