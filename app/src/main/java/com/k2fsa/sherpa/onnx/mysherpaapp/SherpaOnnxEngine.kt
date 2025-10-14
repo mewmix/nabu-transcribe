@@ -52,11 +52,11 @@ object SherpaOnnxEngine {
 
             val modelConfig = OnlineModelConfig(
                 transducer = OnlineTransducerModelConfig(
-                    encoder = "asr/encoder.onnx",
-                    decoder = "asr/decoder.onnx",
-                    joiner = "asr/joiner.onnx",
+                    encoder = "models/asr/encoder.onnx",
+                    decoder = "models/asr/decoder.onnx",
+                    joiner = "models/asr/joiner.onnx",
                 ),
-                tokens = "asr/tokens.txt",
+                tokens = "models/asr/tokens.txt",
             )
 
             val asrConfig = OnlineRecognizerConfig(
@@ -67,7 +67,7 @@ object SherpaOnnxEngine {
 
             val vadConfig = VadModelConfig(
                 sileroVadModelConfig = SileroVadModelConfig(
-                    model = "vad/silero_vad.onnx",
+                    model = "models/vad/silero_vad.onnx",
                     threshold = 0.5F,
                     minSilenceDuration = 0.25F,
                     minSpeechDuration = 0.25F,
@@ -79,7 +79,7 @@ object SherpaOnnxEngine {
 
             val punctConfig = OfflinePunctuationConfig(
                 model = OfflinePunctuationModelConfig(
-                    ctTransformer = "punct/model.onnx",
+                    ctTransformer = "models/punct/model.onnx",
                     numThreads = 1,
                     debug = false,
                     provider = "cpu"
@@ -90,9 +90,9 @@ object SherpaOnnxEngine {
             val ttsConfig = OfflineTtsConfig(
                 model = OfflineTtsModelConfig(
                     vits = OfflineTtsVitsModelConfig(
-                        model = "tts/model.onnx",
+                        model = "models/tts/model.onnx",
                         lexicon = "",
-                        tokens = "tts/config.json",
+                        tokens = "models/tts/config.json",
                         dataDir = "",
                         dictDir = ""
                     ),
@@ -107,7 +107,7 @@ object SherpaOnnxEngine {
             _tts = OfflineTts(assetManager, ttsConfig)
 
             val speakerEmbeddingExtractorConfig = SherpaSpeakerEmbeddingExtractorConfig(
-                model = "spk_emb/embedding.onnx",
+                model = "models/spk_emb/embedding.onnx",
                 numThreads = 2,
                 debug = true,
                 provider = "cpu",
@@ -119,7 +119,7 @@ object SherpaOnnxEngine {
             val sdConfig = OfflineSpeakerDiarizationConfig(
                 segmentation = OfflineSpeakerSegmentationModelConfig(
                     pyannote = OfflineSpeakerSegmentationPyannoteModelConfig(
-                        "spk_seg/segmentation.onnx"
+                        "models/spk_seg/segmentation.onnx"
                     ),
                     debug = true,
                 ),
