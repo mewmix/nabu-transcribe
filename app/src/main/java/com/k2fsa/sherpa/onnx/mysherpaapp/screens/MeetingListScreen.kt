@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.k2fsa.sherpa.onnx.mysherpaapp.NavRoutes
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.SpeakerDatabase
 import com.k2fsa.sherpa.onnx.mysherpaapp.viewmodels.MeetingListViewModel
 import com.k2fsa.sherpa.onnx.mysherpaapp.viewmodels.MeetingListViewModelFactory
@@ -39,7 +41,7 @@ fun MeetingListScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .clickable { navController.navigate("meeting-details/${meeting.id}") }
+                    .clickable { navController.navigate(NavRoutes.MeetingDetails.createRoute(meeting.id)) }
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = meeting.title)

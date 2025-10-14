@@ -5,5 +5,7 @@ sealed class NavRoutes(val route: String) {
     object Help : NavRoutes("help")
     object Enroll : NavRoutes("enroll")
     object MeetingList : NavRoutes("meeting-list")
-    object MeetingDetails : NavRoutes("meeting-details/{meetingId}")
+    object MeetingDetails : NavRoutes("meeting-details/{meetingId}") {
+        fun createRoute(meetingId: Int): String = "meeting-details/$meetingId"
+    }
 }

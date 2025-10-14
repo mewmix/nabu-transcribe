@@ -110,7 +110,20 @@ fun NavigationHost(navController: NavHostController) {
             EnrollScreen()
         }
 
-        composable(NavRoutes.MeetingList.route) {\n            MeetingListScreen(navController)\n        }\n\n        composable(\n            route = NavRoutes.MeetingDetails.route,\n            arguments = listOf(navArgument(\"meetingId\") { type = NavType.IntType })\n        ) {\ backStackEntry ->\n            val meetingId = backStackEntry.arguments?.getInt(\"meetingId\")\n            meetingId?.let {\n                MeetingDetailsScreen(meetingId = it)\n            }\n        }\n    }
+        composable(NavRoutes.MeetingList.route) {
+            MeetingListScreen(navController)
+        }
+
+        composable(
+            route = NavRoutes.MeetingDetails.route,
+            arguments = listOf(navArgument("meetingId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val meetingId = backStackEntry.arguments?.getInt("meetingId")
+            meetingId?.let {
+                MeetingDetailsScreen(meetingId = it)
+            }
+        }
+    }
 }
 
 @Composable
