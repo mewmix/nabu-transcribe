@@ -198,7 +198,6 @@ fun HomeScreen(navController: NavController) {
                         }
 
                         val segments = SherpaOnnxEngine.sd.process(audioSamples)
-                        val speakers = database.speakerDao().getAll()
                         val builder = StringBuilder()
 
                         for (segment in segments) {

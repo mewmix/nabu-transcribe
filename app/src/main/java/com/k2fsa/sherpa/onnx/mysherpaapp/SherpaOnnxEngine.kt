@@ -2,6 +2,7 @@ package com.k2fsa.sherpa.onnx.mysherpaapp
 
 import android.content.res.AssetManager
 import com.k2fsa.sherpa.onnx.*
+import com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractorConfig as SherpaSpeakerEmbeddingExtractorConfig
 import com.k2fsa.sherpa.onnx.mysherpaapp.utils.withDebugLogging
 
 object SherpaOnnxEngine {
@@ -11,6 +12,12 @@ object SherpaOnnxEngine {
     val sd: OfflineSpeakerDiarization
         get() = withDebugLogging {
             return _sd!!
+        }
+
+    var _speakerEmbeddingExtractor: SpeakerEmbeddingExtractor? = null
+    val speakerEmbeddingExtractor: SpeakerEmbeddingExtractor
+        get() = withDebugLogging {
+            return _speakerEmbeddingExtractor!!
         }
 
     var _asr: OnlineRecognizer? = null
@@ -99,6 +106,16 @@ object SherpaOnnxEngine {
             )
             _tts = OfflineTts(assetManager, ttsConfig)
 
+            val speakerEmbeddingExtractorConfig = SherpaSpeakerEmbeddingExtractorConfig(
+                model = "spk_emb/embedding.onnx",
+                numThreads = 2,
+                debug = true,
+                provider = "cpu",
+            )
+            _speakerEmbeddingExtractor =
+                SpeakerEmbeddingExtractor(assetManager, speakerEmbeddingExtractorConfig)
+
+
             val sdConfig = OfflineSpeakerDiarizationConfig(
                 segmentation = OfflineSpeakerSegmentationModelConfig(
                     pyannote = OfflineSpeakerSegmentationPyannoteModelConfig(
@@ -106,11 +123,7 @@ object SherpaOnnxEngine {
                     ),
                     debug = true,
                 ),
-                embedding = SpeakerEmbeddingExtractorConfig(
-                    model = "spk_emb/embedding.onnx",
-                    debug = true,
-                    numThreads = 2,
-                ),
+                embedding = speakerEmbeddingExtractorConfig,
                 clustering = FastClusteringConfig(numClusters = -1, threshold = 0.5f),
                 minDurationOn = 0.2f,
                 minDurationOff = 0.5f,

@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.k2fsa.sherpa.onnx.mysherpaapp"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"

@@ -40,7 +40,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.annotation.SuppressLint
 
+@SuppressLint("MissingPermission")
 @Composable
 fun EnrollScreen() {
     val context = LocalContext.current
@@ -117,8 +119,10 @@ fun EnrollScreen() {
                 }
 
                 coroutineScope.launch(Dispatchers.IO) {
-                    // val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
-                    val embedding = FloatArray(0) // dummy value
+                    val stream = SherpaOnnxEngine.speakerEmbeddingExtractor.createStream()
+                    stream.acceptWaveform(recordedAudio.toFloatArray(), sampleRate = 16000)
+                    val embedding = SherpaOnnxEngine.speakerEmbeddingExtractor.compute(stream)
+
                     database.speakerDao().insert(Speaker(name = trimmedName, embedding = embedding))
                     withContext(Dispatchers.Main) {
                         status = "Speaker $trimmedName saved"
