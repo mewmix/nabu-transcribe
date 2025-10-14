@@ -18,6 +18,7 @@ import androidx.core.app.ActivityCompat
 import com.k2fsa.sherpa.onnx.mysherpaapp.SherpaOnnxEngine
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.Speaker
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.SpeakerDatabase
+import com.k2fsa.sherpa.onnx.mysherpaapp.utils.withDebugLogging
 import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
 
@@ -45,22 +46,24 @@ fun EnrollScreen() {
         )
 
         Row {
-            Button(onClick = { isRecording = !isRecording }) {
+            Button(onClick = withDebugLogging { { isRecording = !isRecording } }) {
                 Text(text = if (isRecording) "Stop Recording" else "Start Recording")
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = {
-                if (speakerName.isNotBlank()) {
-                    thread {
-                        val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
-                        val speaker = Speaker(name = speakerName, embedding = embedding)
-                        coroutineScope.launch {
-                            SpeakerDatabase.getDatabase(context).speakerDao().insert(speaker)
-                            status = "Speaker $speakerName saved"
+            Button(onClick = withDebugLogging {
+                {
+                    if (speakerName.isNotBlank()) {
+                        thread {
+                            val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
+                            val speaker = Speaker(name = speakerName, embedding = embedding)
+                            coroutineScope.launch {
+                                SpeakerDatabase.getDatabase(context).speakerDao().insert(speaker)
+                                status = "Speaker $speakerName saved"
+                            }
                         }
+                    } else {
+                        status = "Please enter a speaker name"
                     }
-                } else {
-                    status = "Please enter a speaker name"
                 }
             }) {
                 Text(text = "Save Speaker")
@@ -72,40 +75,42 @@ fun EnrollScreen() {
 
     if (isRecording) {
         thread {
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.RECORD_AUDIO
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return@thread
-            }
-            val audioRecord = AudioRecord.Builder()
-                .setAudioSource(MediaRecorder.AudioSource.MIC)
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(16000)
-                        .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
-                        .build()
-                )
-                .build()
-
-            audioRecord.startRecording()
-
-            val buffer = ShortArray(1600) // 0.1 seconds
-            val floatBuffer = FloatArray(1600)
-
-            while (isRecording) {
-                val read = audioRecord.read(buffer, 0, buffer.size)
-                if (read > 0) {
-                    for (i in 0 until read) {
-                        floatBuffer[i] = buffer[i] / 32768.0f
-                    }
-                    recordedAudio.addAll(floatBuffer.toList())
+            withDebugLogging {
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECORD_AUDIO
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    return@withDebugLogging
                 }
+                val audioRecord = AudioRecord.Builder()
+                    .setAudioSource(MediaRecorder.AudioSource.MIC)
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(16000)
+                            .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                            .build()
+                    )
+                    .build()
+
+                audioRecord.startRecording()
+
+                val buffer = ShortArray(1600) // 0.1 seconds
+                val floatBuffer = FloatArray(1600)
+
+                while (isRecording) {
+                    val read = audioRecord.read(buffer, 0, buffer.size)
+                    if (read > 0) {
+                        for (i in 0 until read) {
+                            floatBuffer[i] = buffer[i] / 32768.0f
+                        }
+                        recordedAudio.addAll(floatBuffer.toList())
+                    }
+                }
+                audioRecord.stop()
+                audioRecord.release()
             }
-            audioRecord.stop()
-            audioRecord.release()
         }
     }
 }

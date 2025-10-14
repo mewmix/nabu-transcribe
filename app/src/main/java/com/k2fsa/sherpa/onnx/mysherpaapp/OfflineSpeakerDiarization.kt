@@ -1,6 +1,7 @@
 package com.k2fsa.sherpa.onnx
 
 import android.content.res.AssetManager
+import com.k2fsa.sherpa.onnx.mysherpaapp.utils.withDebugLogging
 
 data class OfflineSpeakerSegmentationPyannoteModelConfig(
     var model: String = "",
@@ -53,21 +54,21 @@ class OfflineSpeakerDiarization(
         }
     }
 
-    fun release() = finalize()
+    fun release() = withDebugLogging { finalize() }
 
     // Only config.clustering is used. All other fields in config
     // are ignored
-    fun setConfig(config: OfflineSpeakerDiarizationConfig) = setConfig(ptr, config)
+    fun setConfig(config: OfflineSpeakerDiarizationConfig) = withDebugLogging { setConfig(ptr, config) }
 
-    fun sampleRate() = getSampleRate(ptr)
+    fun sampleRate() = withDebugLogging { getSampleRate(ptr) }
 
-    fun process(samples: FloatArray) = process(ptr, samples)
+    fun process(samples: FloatArray) = withDebugLogging { process(ptr, samples) }
 
     fun processWithCallback(
         samples: FloatArray,
         callback: (numProcessedChunks: Int, numTotalChunks: Int, arg: Long) -> Int,
         arg: Long = 0,
-    ) = processWithCallback(ptr, samples, callback, arg)
+    ) = withDebugLogging { processWithCallback(ptr, samples, callback, arg) }
 
     private external fun delete(ptr: Long)
 

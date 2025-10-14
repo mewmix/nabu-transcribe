@@ -1,4 +1,4 @@
-package com.k2fsa.sherpa.onnx.speaker.diarization.screens
+package com.k2fsa.sherpa.onnx.mysherpaapp.utils
 
 import android.content.Context
 import android.media.AudioFormat
@@ -18,7 +18,7 @@ data class WaveData(
 // References
 // - https://gist.github.com/a-m-s/1991ab18fbcb0fcc2cf9
 // - https://github.com/taehwandev/MediaCodecExample/blob/master/app/src/main/java/tech/thdev/mediacodecexample/audio/AACAudioDecoderThread.kt
-fun readUri(context: Context, uri: Uri): WaveData {
+fun readUri(context: Context, uri: Uri): WaveData = withDebugLogging {
     val extractor = MediaExtractor()
     extractor.setDataSource(context, uri, null)
 
@@ -37,7 +37,7 @@ fun readUri(context: Context, uri: Uri): WaveData {
             }
 
             if (encoding != AudioFormat.ENCODING_PCM_16BIT) {
-                return WaveData(msg = "We support only 16-bit encoded wave files")
+                return@withDebugLogging WaveData(msg = "We support only 16-bit encoded wave files")
             }
 
             val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
@@ -95,7 +95,7 @@ fun readUri(context: Context, uri: Uri): WaveData {
                             k += s.size
                         }
                         if (k == 0) {
-                            return WaveData(msg = "Failed to read selected file")
+                            return@withDebugLogging WaveData(msg = "Failed to read selected file")
                         }
 
                         val ans = FloatArray(k)
@@ -105,7 +105,7 @@ fun readUri(context: Context, uri: Uri): WaveData {
                             k += s.size
                         }
 
-                        return WaveData(sampleRate = sampleRate, samples = ans)
+                        return@withDebugLogging WaveData(sampleRate = sampleRate, samples = ans)
                     }
 
                     val buffer = outputBuffers[outputBufferIndex]
@@ -133,5 +133,5 @@ fun readUri(context: Context, uri: Uri): WaveData {
     }
 
     extractor.release()
-    return WaveData(msg = "not an audio file")
+    return@withDebugLogging WaveData(msg = "not an audio file")
 }

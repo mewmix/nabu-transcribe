@@ -24,14 +24,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.k2fsa.sherpa.onnx.mysherpaapp.screens.EnrollScreen
 import com.k2fsa.sherpa.onnx.mysherpaapp.screens.HelpScreen
 import com.k2fsa.sherpa.onnx.mysherpaapp.screens.HomeScreen
+import com.k2fsa.sherpa.onnx.mysherpaapp.screens.MeetingListScreen
+import com.k2fsa.sherpa.onnx.mysherpaapp.screens.MeetingDetailsScreen
 import com.k2fsa.sherpa.onnx.mysherpaapp.ui.theme.SherpaOnnxSpeakerDiarizationTheme
+import com.k2fsa.sherpa.onnx.mysherpaapp.utils.AppLog
 
 const val TAG = "sherpa-onnx-app"
 
@@ -50,7 +55,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        SherpaOnnxEngine.init(this.assets)
+        try {
+            SherpaOnnxEngine.init(this.assets)
+        } catch (e: Exception) {
+            AppLog.e("Failed to initialize SherpaOnnxEngine", e)
+            // TODO: Show a dialog to the user
+        }
     }
 }
 
@@ -99,7 +109,8 @@ fun NavigationHost(navController: NavHostController) {
         composable(NavRoutes.Enroll.route) {
             EnrollScreen()
         }
-    }
+
+        composable(NavRoutes.MeetingList.route) {\n            MeetingListScreen(navController)\n        }\n\n        composable(\n            route = NavRoutes.MeetingDetails.route,\n            arguments = listOf(navArgument(\"meetingId\") { type = NavType.IntType })\n        ) {\ backStackEntry ->\n            val meetingId = backStackEntry.arguments?.getInt(\"meetingId\")\n            meetingId?.let {\n                MeetingDetailsScreen(meetingId = it)\n            }\n        }\n    }
 }
 
 @Composable

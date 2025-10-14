@@ -1,4 +1,4 @@
-package com.k2fsa.sherpa.onnx.speaker.diarization
+package com.k2fsa.sherpa.onnx.mysherpaapp
 
 import androidx.compose.ui.graphics.vector.ImageVector
 

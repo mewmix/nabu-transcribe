@@ -1,46 +1,47 @@
 package com.k2fsa.sherpa.onnx.mysherpaapp
 
 import android.content.res.AssetManager
-import android.util.Log
 import com.k2fsa.sherpa.onnx.*
+import com.k2fsa.sherpa.onnx.mysherpaapp.utils.withDebugLogging
 
 object SherpaOnnxEngine {
+    private const val TAG = "SherpaOnnxEngine"
+
     var _sd: OfflineSpeakerDiarization? = null
     val sd: OfflineSpeakerDiarization
-        get() {
+        get() = withDebugLogging {
             return _sd!!
         }
 
     var _asr: OnlineRecognizer? = null
     val asr: OnlineRecognizer
-        get() {
+        get() = withDebugLogging {
             return _asr!!
         }
 
     var _vad: Vad? = null
     val vad: Vad
-        get() {
+        get() = withDebugLogging {
             return _vad!!
         }
 
     var _punct: OnlinePunctuation? = null
     val punct: OnlinePunctuation
-        get() {
+        get() = withDebugLogging {
             return _punct!!
         }
 
     var _tts: Tts? = null
     val tts: Tts
-        get() {
+        get() = withDebugLogging {
             return _tts!!
         }
 
-    fun init(assetManager: AssetManager) {
+    fun init(assetManager: AssetManager) = withDebugLogging {
         synchronized(this) {
             if (_sd != null) {
-                return
+                return@withDebugLogging
             }
-            Log.i(TAG, "Initializing sherpa-onnx")
 
             val modelConfig = OnlineModelConfig(
                 transducer = OnlineTransducerModelConfig(
