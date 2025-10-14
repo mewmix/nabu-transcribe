@@ -2,6 +2,7 @@ package com.k2fsa.sherpa.onnx.mysherpaapp
 
 import android.content.res.AssetManager
 import com.k2fsa.sherpa.onnx.*
+import com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractorConfig as SherpaSpeakerEmbeddingExtractorConfig
 import com.k2fsa.sherpa.onnx.mysherpaapp.utils.withDebugLogging
 
 object SherpaOnnxEngine {
@@ -11,6 +12,12 @@ object SherpaOnnxEngine {
     val sd: OfflineSpeakerDiarization
         get() = withDebugLogging {
             return _sd!!
+        }
+
+    var _speakerEmbeddingExtractor: SpeakerEmbeddingExtractor? = null
+    val speakerEmbeddingExtractor: SpeakerEmbeddingExtractor
+        get() = withDebugLogging {
+            return _speakerEmbeddingExtractor!!
         }
 
     var _asr: OnlineRecognizer? = null
@@ -25,14 +32,14 @@ object SherpaOnnxEngine {
             return _vad!!
         }
 
-    var _punct: OnlinePunctuation? = null
-    val punct: OnlinePunctuation
+    var _punct: OfflinePunctuation? = null
+    val punct: OfflinePunctuation
         get() = withDebugLogging {
             return _punct!!
         }
 
-    var _tts: Tts? = null
-    val tts: Tts
+    var _tts: OfflineTts? = null
+    val tts: OfflineTts
         get() = withDebugLogging {
             return _tts!!
         }
@@ -45,11 +52,11 @@ object SherpaOnnxEngine {
 
             val modelConfig = OnlineModelConfig(
                 transducer = OnlineTransducerModelConfig(
-                    encoder = "asr/encoder.onnx",
-                    decoder = "asr/decoder.onnx",
-                    joiner = "asr/joiner.onnx",
+                    encoder = "models/asr/encoder.onnx",
+                    decoder = "models/asr/decoder.onnx",
+                    joiner = "models/asr/joiner.onnx",
                 ),
-                tokens = "asr/tokens.txt",
+                tokens = "models/asr/tokens.txt",
             )
 
             val asrConfig = OnlineRecognizerConfig(
@@ -60,7 +67,7 @@ object SherpaOnnxEngine {
 
             val vadConfig = VadModelConfig(
                 sileroVadModelConfig = SileroVadModelConfig(
-                    model = "vad/silero_vad.onnx",
+                    model = "models/vad/silero_vad.onnx",
                     threshold = 0.5F,
                     minSilenceDuration = 0.25F,
                     minSpeechDuration = 0.25F,
@@ -70,24 +77,53 @@ object SherpaOnnxEngine {
             )
             _vad = Vad(assetManager, vadConfig)
 
-            val punctConfig = OnlinePunctuationConfig(model = "punct/model.onnx", vocab = "punct/bpe.vocab")
-            _punct = OnlinePunctuation(assetManager, punctConfig)
+            val punctConfig = OfflinePunctuationConfig(
+                model = OfflinePunctuationModelConfig(
+                    ctTransformer = "models/punct/model.onnx",
+                    numThreads = 1,
+                    debug = false,
+                    provider = "cpu"
+                )
+            )
+            _punct = OfflinePunctuation(assetManager, punctConfig)
 
-            val ttsConfig = TtsConfig(model = "tts/model.onnx", vocab = "tts/config.json")
-            _tts = Tts(assetManager, ttsConfig)
+            val ttsConfig = OfflineTtsConfig(
+                model = OfflineTtsModelConfig(
+                    vits = OfflineTtsVitsModelConfig(
+                        model = "models/tts/model.onnx",
+                        lexicon = "",
+                        tokens = "models/tts/config.json",
+                        dataDir = "",
+                        dictDir = ""
+                    ),
+                    numThreads = 1,
+                    debug = false,
+                    provider = "cpu"
+                ),
+                ruleFsts = "",
+                ruleFars = "",
+                maxNumSentences = 1
+            )
+            _tts = OfflineTts(assetManager, ttsConfig)
+
+            val speakerEmbeddingExtractorConfig = SherpaSpeakerEmbeddingExtractorConfig(
+                model = "models/spk_emb/embedding.onnx",
+                numThreads = 2,
+                debug = true,
+                provider = "cpu",
+            )
+            _speakerEmbeddingExtractor =
+                SpeakerEmbeddingExtractor(assetManager, speakerEmbeddingExtractorConfig)
+
 
             val sdConfig = OfflineSpeakerDiarizationConfig(
                 segmentation = OfflineSpeakerSegmentationModelConfig(
                     pyannote = OfflineSpeakerSegmentationPyannoteModelConfig(
-                        "spk_seg/segmentation.onnx"
+                        "models/spk_seg/segmentation.onnx"
                     ),
                     debug = true,
                 ),
-                embedding = SpeakerEmbeddingExtractorConfig(
-                    model = "spk_emb/embedding.onnx",
-                    debug = true,
-                    numThreads = 2,
-                ),
+                embedding = speakerEmbeddingExtractorConfig,
                 clustering = FastClusteringConfig(numClusters = -1, threshold = 0.5f),
                 minDurationOn = 0.2f,
                 minDurationOff = 0.5f,

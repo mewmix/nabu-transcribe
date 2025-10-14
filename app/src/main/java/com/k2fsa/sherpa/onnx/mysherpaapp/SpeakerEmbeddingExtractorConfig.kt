@@ -1,4 +1,4 @@
-package com.k2fsa.sherpa.onnx
+package com.k2fsa.sherpa.onnx.mysherpaapp
 
 data class SpeakerEmbeddingExtractorConfig(
     val model: String = "",
