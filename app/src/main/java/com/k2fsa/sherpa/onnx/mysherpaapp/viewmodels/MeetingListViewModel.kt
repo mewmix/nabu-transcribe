@@ -1,6 +1,7 @@
 package com.k2fsa.sherpa.onnx.mysherpaapp.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.Meeting
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.SpeakerDatabase

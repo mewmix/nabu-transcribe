@@ -54,7 +54,7 @@ fun EnrollScreen() {
                 {
                     if (speakerName.isNotBlank()) {
                         thread {
-                            val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
+                            val embedding = SherpaOnnxEngine.computeEmbedding(recordedAudio.toFloatArray())
                             val speaker = Speaker(name = speakerName, embedding = embedding)
                             coroutineScope.launch {
                                 SpeakerDatabase.getDatabase(context).speakerDao().insert(speaker)
@@ -88,7 +88,7 @@ fun EnrollScreen() {
                     .setAudioFormat(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(16000)
+                            .setSampleRate(SherpaOnnxEngine.SAMPLE_RATE)
                             .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
                             .build()
                     )
@@ -104,8 +104,8 @@ fun EnrollScreen() {
                     if (read > 0) {
                         for (i in 0 until read) {
                             floatBuffer[i] = buffer[i] / 32768.0f
+                            recordedAudio.add(floatBuffer[i])
                         }
-                        recordedAudio.addAll(floatBuffer.toList())
                     }
                 }
                 audioRecord.stop()

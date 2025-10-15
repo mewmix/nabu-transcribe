@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.SpeakerDatabase
 import com.k2fsa.sherpa.onnx.mysherpaapp.viewmodels.MeetingListViewModel
 import com.k2fsa.sherpa.onnx.mysherpaapp.viewmodels.MeetingListViewModelFactory
