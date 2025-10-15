@@ -1,20 +1,33 @@
-package com.k2fsa.sherpa.onnx.mysherpaapp.screens
-
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.k2fsa.sherpa.onnx.mysherpaapp.SherpaOnnxEngine
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.Speaker
 import com.k2fsa.sherpa.onnx.mysherpaapp.data.SpeakerDatabase
@@ -31,6 +44,21 @@ fun EnrollScreen() {
     val recordedAudio = remember { mutableStateListOf<Float>() }
     val coroutineScope = rememberCoroutineScope()
 
+    var hasRecordAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasRecordAudioPermission = isGranted
+        }
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,7 +74,15 @@ fun EnrollScreen() {
         )
 
         Row {
-            Button(onClick = withDebugLogging { { isRecording = !isRecording } }) {
+            Button(onClick = withDebugLogging {
+                {
+                    if (hasRecordAudioPermission) {
+                        isRecording = !isRecording
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                }
+            }) {
                 Text(text = if (isRecording) "Stop Recording" else "Start Recording")
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -54,7 +90,8 @@ fun EnrollScreen() {
                 {
                     if (speakerName.isNotBlank()) {
                         thread {
-                            val embedding = SherpaOnnxEngine.sd.extractEmbedding(recordedAudio.toFloatArray())
+                            val embedding =
+                                SherpaOnnxEngine.computeEmbedding(recordedAudio.toFloatArray())
                             val speaker = Speaker(name = speakerName, embedding = embedding)
                             coroutineScope.launch {
                                 SpeakerDatabase.getDatabase(context).speakerDao().insert(speaker)
@@ -76,19 +113,12 @@ fun EnrollScreen() {
     if (isRecording) {
         thread {
             withDebugLogging {
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.RECORD_AUDIO
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    return@withDebugLogging
-                }
                 val audioRecord = AudioRecord.Builder()
                     .setAudioSource(MediaRecorder.AudioSource.MIC)
                     .setAudioFormat(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(16000)
+                            .setSampleRate(SherpaOnnxEngine.SAMPLE_RATE)
                             .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
                             .build()
                     )
@@ -104,8 +134,8 @@ fun EnrollScreen() {
                     if (read > 0) {
                         for (i in 0 until read) {
                             floatBuffer[i] = buffer[i] / 32768.0f
+                            recordedAudio.add(floatBuffer[i])
                         }
-                        recordedAudio.addAll(floatBuffer.toList())
                     }
                 }
                 audioRecord.stop()

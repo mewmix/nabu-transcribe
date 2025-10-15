@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.AudioTrack
 import android.media.MediaRecorder
 import android.os.Environment
 import android.util.Log
@@ -32,6 +31,7 @@ import com.k2fsa.sherpa.onnx.mysherpaapp.export.JsonExporter
 import com.k2fsa.sherpa.onnx.mysherpaapp.export.SrtExporter
 import com.k2fsa.sherpa.onnx.mysherpaapp.export.VttExporter
 import com.k2fsa.sherpa.onnx.mysherpaapp.utils.withDebugLogging
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.concurrent.thread
@@ -41,7 +41,6 @@ fun HomeScreen(navController: NavController) {
     val context = LocalContext.current
     var transcribedText by remember { mutableStateOf("") }
     var diarizationResult by remember { mutableStateOf("") }
-    var ttsText by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
     var punctuationEnabled by remember { mutableStateOf(true) }
     val recordedAudio = remember { mutableStateListOf<Float>() }
@@ -117,15 +116,25 @@ fun HomeScreen(navController: NavController) {
                 {
                     coroutineScope.launch {
                         val speakers = SpeakerDatabase.getDatabase(context).speakerDao().getAll()
-                        val segments = SherpaOnnxEngine.sd.process(recordedAudio.toFloatArray())
+                        val audioSamples = recordedAudio.toFloatArray()
+                        val segments = SherpaOnnxEngine.sd.process(audioSamples)
                         var result = ""
+                        val sampleRate = SherpaOnnxEngine.SAMPLE_RATE
                         for (segment in segments) {
+                            val segmentSamples = audioSamples.extractSegment(segment.start, segment.end, sampleRate)
+                            if (segmentSamples.isEmpty()) {
+                                continue
+                            }
                             val stream = SherpaOnnxEngine.asr.createStream()
-                            stream.acceptWaveform(segment.samples, 16000)
+                            stream.acceptWaveform(segmentSamples, sampleRate)
+                            stream.inputFinished()
                             SherpaOnnxEngine.asr.decode(stream)
-                            val text = SherpaOnnxEngine.asr.getResult(stream).text
+                            var text = SherpaOnnxEngine.asr.getResult(stream).text
+                            if (punctuationEnabled) {
+                                text = SherpaOnnxEngine.punct.addPunctuation(text)
+                            }
 
-                            val embedding = SherpaOnnxEngine.sd.extractEmbedding(segment.samples)
+                            val embedding = SherpaOnnxEngine.computeEmbedding(segmentSamples)
                             var speakerName = "Unknown"
                             var speakerId: Int? = null
                             var maxSimilarity = 0.0f
@@ -187,40 +196,8 @@ fun HomeScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // TTS Section
-        Text(text = "TTS", style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(
-            value = ttsText,
-            onValueChange = { ttsText = it },
-            label = { Text("Text to speak") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row {
-            Button(onClick = withDebugLogging {
-                {
-                    thread {
-                        val audio = SherpaOnnxEngine.tts.synthesize(ttsText)
-                        val audioTrack = AudioTrack.Builder()
-                            .setAudioFormat(
-                                AudioFormat.Builder()
-                                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                    .setSampleRate(audio.sampleRate)
-                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                    .build()
-                            )
-                            .setBufferSizeInBytes(audio.samples.size * 2)
-                            .build()
-                        audioTrack.play()
-                        audioTrack.write(audio.samples, 0, audio.samples.size)
-                    }
-                }
-            }) {
-                Text(text = "Speak")
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = { showExportDialog = true }) {
-                Text(text = "Export")
-            }
+        Button(onClick = { showExportDialog = true }) {
+            Text(text = "Export")
         }
     }
 
@@ -235,7 +212,7 @@ fun HomeScreen(navController: NavController) {
                             coroutineScope.launch {
                                 meetingId?.let {
                                     val meeting = SpeakerDatabase.getDatabase(context).meetingDao().getById(it.toInt())
-                                    val turns = SpeakerDatabase.getDatabase(context).turnDao().getByMeetingId(it.toInt())
+                                    val turns = SpeakerDatabase.getDatabase(context).turnDao().getByMeetingId(it.toInt()).first()
                                     if (meeting != null) {
                                         val json = JsonExporter().export(meeting, turns)
                                         val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "meeting.json")
@@ -253,7 +230,7 @@ fun HomeScreen(navController: NavController) {
                         {
                             coroutineScope.launch {
                                 meetingId?.let {
-                                    val turns = SpeakerDatabase.getDatabase(context).turnDao().getByMeetingId(it.toInt())
+                                    val turns = SpeakerDatabase.getDatabase(context).turnDao().getByMeetingId(it.toInt()).first()
                                     val srt = SrtExporter().export(turns)
                                     val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "meeting.srt")
                                     file.writeText(srt)
@@ -269,7 +246,7 @@ fun HomeScreen(navController: NavController) {
                         {
                             coroutineScope.launch {
                                 meetingId?.let {
-                                    val turns = SpeakerDatabase.getDatabase(context).turnDao().getByMeetingId(it.toInt())
+                                    val turns = SpeakerDatabase.getDatabase(context).turnDao().getByMeetingId(it.toInt()).first()
                                     val vtt = VttExporter().export(turns)
                                     val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "meeting.vtt")
                                     file.writeText(vtt)
@@ -303,7 +280,7 @@ fun HomeScreen(navController: NavController) {
                     .setAudioFormat(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(16000)
+                            .setSampleRate(SherpaOnnxEngine.SAMPLE_RATE)
                             .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
                             .build()
                     )
@@ -322,19 +299,22 @@ fun HomeScreen(navController: NavController) {
                         for (i in 0 until read) {
                             floatBuffer[i] = buffer[i] / 32768.0f
                         }
-                        recordedAudio.addAll(floatBuffer.toList())
+                        for (i in 0 until read) {
+                            recordedAudio.add(floatBuffer[i])
+                        }
 
-                        SherpaOnnxEngine.vad.acceptWaveform(floatBuffer)
+                        SherpaOnnxEngine.vad.acceptWaveform(floatBuffer.copyOf(read))
                         if (SherpaOnnxEngine.vad.isSpeechDetected()) {
                             while (!SherpaOnnxEngine.vad.empty()) {
                                 val segment = SherpaOnnxEngine.vad.front()
-                                stream.acceptWaveform(segment.samples, 16000)
+                                stream.acceptWaveform(segment.samples, SherpaOnnxEngine.SAMPLE_RATE)
                                 SherpaOnnxEngine.vad.pop()
                             }
+                            stream.inputFinished()
                             SherpaOnnxEngine.asr.decode(stream)
                             var result = SherpaOnnxEngine.asr.getResult(stream).text
                             if (punctuationEnabled) {
-                                result = SherpaOnnxEngine.punct.add(result)
+                                result = SherpaOnnxEngine.punct.addPunctuation(result)
                             }
                             transcribedText = result
                         }
@@ -357,4 +337,13 @@ fun cosineSimilarity(v1: FloatArray, v2: FloatArray): Float = withDebugLogging {
         norm2 += v2[i] * v2[i]
     }
     return@withDebugLogging dotProduct / (kotlin.math.sqrt(norm1) * kotlin.math.sqrt(norm2))
+}
+
+private fun FloatArray.extractSegment(startSeconds: Float, endSeconds: Float, sampleRate: Int): FloatArray {
+    val startIndex = (startSeconds * sampleRate).toInt().coerceIn(0, size)
+    val endIndex = (endSeconds * sampleRate).toInt().coerceIn(startIndex, size)
+    if (endIndex <= startIndex) {
+        return FloatArray(0)
+    }
+    return copyOfRange(startIndex, endIndex)
 }

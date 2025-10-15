@@ -1,4 +1,4 @@
-package com.k2fsa.sherpa.onnx.speaker.diarization.ui.theme
+package com.k2fsa.sherpa.onnx.mysherpaapp.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
